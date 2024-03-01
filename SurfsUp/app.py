@@ -1,11 +1,17 @@
 # Import the dependencies.
 
-from flask import Flask, jsonify
+from matplotlib import style
+style.use('fivethirtyeight')
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import datetime as dt
 import sqlalchemy
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
-from sqlalchemy import create_engine, func
-import numpy as np
+from sqlalchemy import create_engine, func, inspect
+from flask import Flask, jsonify
+
 
 #################################################
 # Database Setup
@@ -52,16 +58,14 @@ def names():
     # Create our session (link) from Python to the DB
     session = Session(engine)
 
-    """Return a list of all passenger names"""
-    # Query all passengers
-    results = session.query(Passenger.name).all()
+    last_date = session.query(measurement.date).order_by(measurement.date.desc()).first()   
+    year_ago = dt.date(2017, 8, 23) - dt.timedelta(days=365)
 
-    session.close()
+    year_prcp = session.query(measurement.date, measurement.prcp).\
+    filter(measurement.date >= year_ago, measurement.prcp != None).\
+    order_by(measurement.date).all()
 
-    # Convert list of tuples into normal list
-    all_names = list(np.ravel(results))
-
-    return jsonify(all_names)
+    return jsonify(dict(year_prcp))
 
 
 @app.route("/api/v1.0/stations")
@@ -69,23 +73,62 @@ def passengers():
     # Create our session (link) from Python to the DB
     session = Session(engine)
 
-    """Return a list of passenger data including the name, age, and sex of each passenger"""
-    # Query all passengers
-    results = session.query(Passenger.name, Passenger.age, Passenger.sex).all()
+    session.query(measurement.station).distinct().count()
 
-    session.close()
+    most_active_stations = session.query(measurement.station,func.count(measurement.station)).\
+                               group_by(measurement.station).\
+                               order_by(func.count(measurement.station).desc()).all()
 
-    # Create a dictionary from the row data and append to a list of all_passengers
-    all_passengers = []
-    for name, age, sex in results:
-        passenger_dict = {}
-        passenger_dict["name"] = name
-        passenger_dict["age"] = age
-        passenger_dict["sex"] = sex
-        all_passengers.append(passenger_dict)
+    return jsonify(dict(most_active_stations))
 
-    return jsonify(all_passengers)
+@app.route("/api/v1.0/tobs")
+def names():
+    # Create our session (link) from Python to the DB
+    session = Session(engine)
+ 
+    year_ago = dt.date(2017, 8, 23) - dt.timedelta(days=365)
 
+    year_temp = session.query(measurement.tobs).\
+        filter(measurement.date >= year_ago, measurement.station == 'USC00519281').\
+        order_by(measurement.tobs).all()
+    
+    temps = []
+    for temp in temps:
+        temp_dict = {}
+        temp_dict["tobs"] = temp.tobs
+        temp_dict["age"] = age
+        temp_dict["sex"] = sex
+        temps.append(passenger_dict)
+
+    return jsonify(dict(year_prcp))
+
+@app.route("/api/v1.0/<start>")
+def names():
+    # Create our session (link) from Python to the DB
+    session = Session(engine)
+
+    last_date = session.query(measurement.date).order_by(measurement.date.desc()).first()   
+    year_ago = dt.date(2017, 8, 23) - dt.timedelta(days=365)
+
+    year_prcp = session.query(measurement.date, measurement.prcp).\
+    filter(measurement.date >= year_ago, measurement.prcp != None).\
+    order_by(measurement.date).all()
+
+    return jsonify(dict(year_prcp))
+
+@app.route("/api/v1.0/<start>/<end>")
+def names():
+    # Create our session (link) from Python to the DB
+    session = Session(engine)
+
+    last_date = session.query(measurement.date).order_by(measurement.date.desc()).first()   
+    year_ago = dt.date(2017, 8, 23) - dt.timedelta(days=365)
+
+    year_prcp = session.query(measurement.date, measurement.prcp).\
+    filter(measurement.date >= year_ago, measurement.prcp != None).\
+    order_by(measurement.date).all()
+
+    return jsonify(dict(year_prcp))
 
 if __name__ == '__main__':
     app.run(debug=True)
