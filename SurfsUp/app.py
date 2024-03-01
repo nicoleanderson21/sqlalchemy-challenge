@@ -12,15 +12,12 @@ from sqlalchemy.orm import Session
 from sqlalchemy import create_engine, func, inspect
 from flask import Flask, jsonify
 
-
-#################################################
 # Database Setup
-#################################################
 
-engine = create_engine("sqlite:///hawaii.sqlite")
-# reflect an existing database into a new model
+engine = create_engine("sqlite:////Users/NicoleAnderson/Dropbox/My Mac (Nicole’s MacBook Air)/Documents/GitHub/sqlalchemy-challenge/SurfsUp/Resources/hawaii.sqlite")
+
 Base = automap_base()
-# reflect the tables
+
 Base.prepare(engine, reflect=True)
 
 # Save references to each table
@@ -30,15 +27,11 @@ station = Base.classes.station
 # Create our session (link) from Python to the DB
 session = Session(engine)
 
-#################################################
 # Flask Setup
-#################################################
 
 app = Flask(__name__)
 
-#################################################
 # Flask Routes
-#################################################
 
 @app.route("/")
 def welcome():
@@ -46,7 +39,7 @@ def welcome():
     return (
         f"Available Routes:<br/>"
         f"/api/v1.0/precipitation<br/>"
-        f"/api/v1.0/station"
+        f"/api/v1.0/stations<br/>"
         f"/api/v1.0/tobs<br/>"
         f"/api/v1.0/<start><br/>"
         f"/api/v1.0/<start>/<end><br/>"
@@ -54,8 +47,8 @@ def welcome():
 
 
 @app.route("/api/v1.0/precipitation")
-def names():
-    # Create our session (link) from Python to the DB
+def precipitation():
+    
     session = Session(engine)
 
     last_date = session.query(measurement.date).order_by(measurement.date.desc()).first()   
@@ -69,8 +62,8 @@ def names():
 
 
 @app.route("/api/v1.0/stations")
-def passengers():
-    # Create our session (link) from Python to the DB
+def station():
+  
     session = Session(engine)
 
     session.query(measurement.station).distinct().count()
@@ -82,8 +75,8 @@ def passengers():
     return jsonify(dict(most_active_stations))
 
 @app.route("/api/v1.0/tobs")
-def names():
-    # Create our session (link) from Python to the DB
+def tobs():
+   
     session = Session(engine)
  
     year_ago = dt.date(2017, 8, 23) - dt.timedelta(days=365)
@@ -96,39 +89,51 @@ def names():
     for temp in temps:
         temp_dict = {}
         temp_dict["tobs"] = temp.tobs
-        temp_dict["age"] = age
-        temp_dict["sex"] = sex
-        temps.append(passenger_dict)
+        temps.append(temp_dict)
 
-    return jsonify(dict(year_prcp))
+    return jsonify(dict(year_temp))
+
+def start_temps(start_date):
+    
+    return session.query(func.min(measurement.tobs), \
+                        func.max(measurement.tobs), \
+                        func.avg(measurement.tobs)).\
+                        filter(measurement.date >= start_date).all()
 
 @app.route("/api/v1.0/<start>")
-def names():
-    # Create our session (link) from Python to the DB
-    session = Session(engine)
 
-    last_date = session.query(measurement.date).order_by(measurement.date.desc()).first()   
-    year_ago = dt.date(2017, 8, 23) - dt.timedelta(days=365)
+def start_date(start):
+    start_temp = start_temps(start)
+    t_temp= list(np.ravel(start_temp))
 
-    year_prcp = session.query(measurement.date, measurement.prcp).\
-    filter(measurement.date >= year_ago, measurement.prcp != None).\
-    order_by(measurement.date).all()
+    t_min = t_temp[0]
+    t_max = t_temp[1]
+    t_avg = t_temp[2]
+    t_dict = {'Minimum Temperature': t_min, 'Maximum Temperature': t_max, 'Average Temperature': t_avg}
 
-    return jsonify(dict(year_prcp))
+    return jsonify(t_dict)
+
+def temps(start_date, end_date):
+
+    return session.query(func.min(measurement.tobs), \
+                         func.max(measurement.tobs), \
+                         func.avg(measurement.tobs)).\
+                         filter(measurement.date >= start_date).\
+                         filter(measurement.date <= end_date).all()
 
 @app.route("/api/v1.0/<start>/<end>")
-def names():
-    # Create our session (link) from Python to the DB
-    session = Session(engine)
 
-    last_date = session.query(measurement.date).order_by(measurement.date.desc()).first()   
-    year_ago = dt.date(2017, 8, 23) - dt.timedelta(days=365)
+def start_end_date(start, end):
+    
+    calc_temp = temps(start, end)
+    ta_temp= list(np.ravel(calc_temp))
 
-    year_prcp = session.query(measurement.date, measurement.prcp).\
-    filter(measurement.date >= year_ago, measurement.prcp != None).\
-    order_by(measurement.date).all()
+    tmin = ta_temp[0]
+    tmax = ta_temp[1]
+    temp_avg = ta_temp[2]
+    temp_dict = { 'Minimum Temperature': tmin, 'Maximum Temperature': tmax, 'Average Temperature': temp_avg}
 
-    return jsonify(dict(year_prcp))
+    return jsonify(temp_dict)
 
 if __name__ == '__main__':
     app.run(debug=True)
